@@ -1,0 +1,147 @@
+Project Description:
+I successfully implemented a relational database system consisting of four tables: Customer, Ratings, Shipment, and Products. 
+These tables demonstrated relationships between each other through the use of appropriate primary and foreign keys, 
+ensuring data integrity and efficient data retrieval.
+
+Table 1: Customer
+Description: This table represents customer information, each customer details are unique.
+
+Columns:
+
+id (integer): The unique identifier for each customer. Serves as the primary key.
+gender (varchar): The customer's gender.
+prior_purchases (integer): The number of purchases made by the customer before the current transaction.
+
+Table 2: Ratings
+Description: This table holds rating information given by customers on a scale of 1 to 5. It is linked to the Customer table via the customer id.
+
+Columns:
+
+rating_id (integer): The unique identifier for each rating. Serves as the primary key.
+customer_care_calls (integer): The number of times customer care was called made related to this rating id.
+customer_rating (integer): The rating given by the customer on scale of 1 to 5.
+id (integer): The unique identifier of the customer who gave the rating. It's a foreign key referring to the Customer table's id.
+
+Table 3: Products
+Description: This table contains information about different products. It's linked to the Shipment table via product id and can also link to the Customer table.
+
+Columns:
+
+product_id (integer): The unique identifier for each product. Serves as the primary key.
+cost_of_the_product (decimal): The cost of the product.
+product_importance (varchar): The level of importance of the product. Could be either high,medium or low.
+weight_in_gms (integer): The weight of the product in grams.
+id (integer): The identifier of the customer who bought the product. It's a foreign key that could refer to the Customer table's id.
+
+Table 4: Shipment
+Description: This table represents shipping information for various products. It is associated with the Products table via product id.
+
+Columns:
+
+shipment_id (integer): The unique identifier for each shipment. Serves as the primary key.
+warehouse_block (varchar): The block section of the warehouse where the product for shipment is stored. The block can either A,B,C,D or F.
+mode_of_shipment (varchar): The method used for shipping the product. Can either be ship flight or mode.
+discount_offered (integer): The discount offered on the shipment.
+reached_on_time_y_n (varchar): Whether or not the shipment reached on time. 1 means its reached on time. 0 means it didn't.
+product_id (integer): The unique identifier of the product being shipped. It's a foreign key referring to the Product table's product_id.\
+
+
+Other Queries used for analysis & Data manipulation:
+
+Created table in pgAdmin to match our data:
+
+CREATE TABLE customer_data (
+	ID INT not null ,
+    warehouse_block CHAR(1),
+    mode_of_shipment VARCHAR(6),
+    customer_care_calls INT,
+    customer_rating INT,
+    cost_of_product DECIMAL(6,2),
+    prior_purchases INT,
+    product_importance VARCHAR(10),
+    gender CHAR(1),
+    discount_offered INT,
+    weight_in_gms INT,
+    reached_on_time INT
+);
+
+Queries:
+
+Total number of calls for late deliveries:
+
+SELECT SUM (customer_care_calls) 
+FROM customer_data
+WHERE reached_on_time = 0;
+
+
+How many times each mode of shipment was used:
+
+SELECT mode_of_shipment, 
+COUNT(*) 
+FROM customer_data 
+GROUP BY mode_of_shipment;
+
+Percentage of shipments that where on time:
+
+SELECT 
+  ((SELECT COUNT(*) FROM customer_data WHERE reached_on_time = 1) * 100.0 /
+  (SELECT COUNT(*) FROM customer_data)) AS percent_not_ontime;
+
+
+The average discount offered for Ship delivery for each level of importance:
+
+SELECT product_importance, AVG(discount_offered)
+FROM (SELECT * FROM customer_data WHERE mode_of_shipment = 'Ship') 
+AS ShipTransactions
+GROUP BY product_importance;
+
+
+Average customer rating for when early and late delivery:
+
+SELECT 
+  (SELECT AVG(customer_rating) FROM customer_data WHERE Reached_on_time = 1) AS Avg_Rating_On_Time,
+  (SELECT AVG(customer_rating) FROM customer_data WHERE Reached_on_time = 0) AS Avg_Rating_Late;
+
+Average cost of products purchased by males:
+
+SELECT AVG(p.Cost_of_the_Product) 
+FROM Products p
+WHERE p.ID IN (
+    SELECT c.ID 
+    FROM Customers c
+    WHERE c.Gender = 'M'
+);
+
+Most common mode of shipment that was on time:
+
+SELECT s.Mode_of_Shipment, COUNT(*) AS Count
+FROM Shipment s
+INNER JOIN Products p ON s.Product_ID = p.Product_ID
+WHERE s.Reached_on_Time_Y_N = 1
+GROUP BY s.Mode_of_Shipment
+ORDER BY Count DESC
+LIMIT 1;
+
+Number of Customer Calls compared to Average Rating Given:
+
+SELECT c.Customer_care_calls, AVG(r.Customer_rating) AS Average_Rating
+FROM ratings c
+INNER JOIN Ratings r ON c.ID = r.ID
+GROUP BY c.Customer_care_calls
+ORDER BY c.Customer_care_calls;
+
+
+Products that cost above average ordered by weight:
+
+SELECT p.Product_ID, p.Cost_of_the_Product, p.Weight_in_gms
+FROM Products p
+WHERE p.Cost_of_the_Product > (
+    SELECT AVG(Cost_of_the_Product)
+    FROM Products
+)
+ORDER BY p.Weight_in_gms;
+
+
+
+
+
